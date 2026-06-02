@@ -9,7 +9,7 @@
 
 // Import dependencies
 use clap::Parser;
-use std::io::{self, Read, Write};
+use std::io::{self, Write};
 use std::fs;
 
 // Define the command-line arguments
