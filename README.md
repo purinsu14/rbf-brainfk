@@ -36,6 +36,7 @@ rbf <file.bf> --loop-limit <n>
 ## Uninstall
 ```
 make uninstall
+make clean
 ```
 
 ---
