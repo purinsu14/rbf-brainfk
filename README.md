@@ -23,7 +23,6 @@ rbf hello.bf
 rbf <file.bf>
 rbf <file.bf> --debug
 rbf <file.bf> --step
-rbf <file.bf> --loop-limit <n>
 ```
 
 ## Flags
@@ -31,7 +30,6 @@ rbf <file.bf> --loop-limit <n>
 |------|-------------|
 | `--debug` | Print memory and instruction state at each step |
 | `--step` | Step through the program one instruction at a time |
-| `--loop-limit <n>` | Stop after n instructions |
 
 ## Uninstall
 ```

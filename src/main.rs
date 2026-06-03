@@ -27,10 +27,6 @@ struct Args {
     /// Enable stepping mode (press enter to step through the code)
     #[arg(short, long)]
     step: bool,
-
-    /// Enable loop limit mode
-    #[arg(short, long)]
-    loop_limit: Option<u32>,
 }
 
 fn print_debug_state(memory: &[u8], memory_pointer: usize, instruction_pointer: usize, instruction: char) {
@@ -41,24 +37,16 @@ fn print_debug_state(memory: &[u8], memory_pointer: usize, instruction_pointer: 
     println!("Instruction: {}", instruction);
 }
 
-fn run(code: &[char], debug: bool, step: bool, loop_limit: Option<u32>) {
+fn run(code: &[char], debug: bool, step: bool) {
 
     // Initialize variables
     const MEMORY_SIZE: usize = 30000;
     let mut instruction_pointer: usize = 0;
     let mut memory_pointer: usize = 0;
     let mut memory: Vec<u8> = vec![0; MEMORY_SIZE];
-    let mut total_instructions: u32 = 0;
 
     // Run the program
     while instruction_pointer < code.len() {
-
-        // Check for loop limit
-        if let Some(limit) = loop_limit {
-            if total_instructions >= limit {
-                break;
-            }
-        }
 
         // initialize instruction
         let instruction = code[instruction_pointer];
@@ -87,9 +75,11 @@ fn run(code: &[char], debug: bool, step: bool, loop_limit: Option<u32>) {
                 io::stdout().flush().unwrap();
             }
             ',' => {
-                let mut input = String::new();
-                io::stdin().read_line(&mut input).expect("Failed to read input");
-                memory[memory_pointer] = input.as_bytes().first().copied().unwrap_or(0);
+                let mut buffer = [0u8; 1];
+                if io::stdin().read_exact(&mut buffer).is_err() {
+                    buffer[0] = 0;
+                }
+                memory[memory_pointer] = buffer[0];
             }
             '[' => {
                 if memory[memory_pointer] == 0 {
@@ -128,43 +118,19 @@ fn run(code: &[char], debug: bool, step: bool, loop_limit: Option<u32>) {
             _ => {}
         }
         instruction_pointer += 1;
-
-        // increment total instructions
-        match instruction {
-            '>' | '<' | '+' | '-' | '.' | ',' | '[' | ']' => total_instructions += 1,
-            _ => {}
-        }
     }
-}
-
-fn parse_args(args: Vec<String>) -> (Vec<char>, bool, bool, Option<u32>) {
-    // Parse command line arguments
-    let args = Args::parse_from(args);
-
-    // print if debug mode is enabled
-    if args.debug {
-        println!("Input file: {}", args.file.display());
-        println!("Debug mode: {}", args.debug);
-        println!("Step mode: {}", args.step);
-        println!("Loop limit: {:?}", args.loop_limit);
-    }
-
-    // Read input file contents
-    let contents = fs::read_to_string(&args.file).expect("Failed to read file");
-
-    // Convert input string to a vector of characters
-    let code: Vec<char> = contents.chars().collect();
-
-    (code, args.debug, args.step, args.loop_limit)
 }
 
 fn main() {
-    // Capture command line arguments
-    let args: Vec<String> = std::env::args().collect();
+    // Capture args
+    let args = Args::parse();
 
-    // Parse arguments
-    let (code, debug, step, loop_limit) = parse_args(args);
+    // Read contents of input file
+    let contents = fs::read_to_string(&args.file).expect("Failed to read file");
+    
+    // convert to chars
+    let code: Vec<char> = contents.chars().collect();
 
     // Run the program
-    run(&code, debug, step, loop_limit);
+    run(&code, args.debug, args.step);
 }
