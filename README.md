@@ -2,7 +2,6 @@
 A brainfuck interpreter written in Rust.
 
 ## Install
-Clone the repo, then:
 ```
 git clone https://github.com/purinsu14/rbf-brainfk.git
 cd rbf-brainfk
@@ -21,15 +20,15 @@ rbf hello.bf
 ## Usage
 ```
 rbf <file.bf>
-rbf <file.bf> --debug
-rbf <file.bf> --step
+rbf --debug <file.bf> 
+rbf --debug --step <file.bf>
 ```
 
 ## Flags
 | Flag | Description |
 |------|-------------|
 | `--debug` | Print memory and instruction state at each step |
-| `--step` | Step through the program one instruction at a time |
+| `--step` | Step through the program one instruction at a time (only works with `--debug`) |
 
 ## Uninstall
 ```
