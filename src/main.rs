@@ -9,7 +9,8 @@
 
 // Import dependencies
 use clap::Parser;
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
+use std::collections::HashMap;
 use std::fs;
 
 // Define the command-line arguments
@@ -29,12 +30,9 @@ struct Args {
     step: bool,
 }
 
-fn print_debug_state(memory: &[u8], memory_pointer: usize, instruction_pointer: usize, instruction: char) {
-    // Print debug state to the console
-    println!("Memory[{}]: {}", memory_pointer, memory[memory_pointer]);
-    println!("Memory Pointer: {}", memory_pointer);
-    println!("Instruction Pointer: {}", instruction_pointer);
-    println!("Instruction: {}", instruction);
+fn print_debug_state(memory: &[u8], mp: usize, ip: usize, instruction: char) {
+    // Print the current state of the program
+    println!("[IP:{:4}] [MP:{:4}] [VAL:{:3}] INST: {}", ip, mp, memory[mp], instruction);
 }
 
 fn run(code: &[char], debug: bool, step: bool) {
@@ -45,6 +43,30 @@ fn run(code: &[char], debug: bool, step: bool) {
     let mut memory_pointer: usize = 0;
     let mut memory: Vec<u8> = vec![0; MEMORY_SIZE];
 
+    // initialize jump table and bracket stack
+    let mut jump_table = HashMap::new();
+    let mut bracket_stack = Vec::new();
+
+    // map brackets to jump table
+    for (i, &c) in code.iter().enumerate() {
+        if c == '[' {
+            bracket_stack.push(i);
+        } else if c == ']' {
+            if let Some(j) = bracket_stack.pop() {
+                jump_table.insert(j, i);
+                jump_table.insert(i, j);
+            } else {
+                eprintln!("Error: Unmatched ']' at index {}", i);
+                return;
+            }
+        }
+    }
+    // check for unmatched brackets
+    if !bracket_stack.is_empty() {
+        eprintln!("Error: Unmatched '[' at index {}", bracket_stack.last().unwrap());
+        return;
+    }
+
     // Run the program
     while instruction_pointer < code.len() {
 
@@ -54,14 +76,13 @@ fn run(code: &[char], debug: bool, step: bool) {
         // Check for debugging mode
         if debug {
             print_debug_state(&memory, memory_pointer, instruction_pointer, instruction);
-        }
-
-        // Check for step mode
-        if step {
-            let mut input = String::new();
-            print!("Press enter to step... ");
-            io::stdout().flush().unwrap();
-            io::stdin().read_line(&mut input).unwrap();
+            // check for step mode
+            if step {
+                print!("Press enter to step... ");
+                io::stdout().flush().unwrap();
+                let mut input = String::new();
+                io::stdin().read_line(&mut input).unwrap();
+            }
         }
 
         // instructions
@@ -75,43 +96,24 @@ fn run(code: &[char], debug: bool, step: bool) {
                 io::stdout().flush().unwrap();
             }
             ',' => {
-                let mut buffer = [0u8; 1];
-                if io::stdin().read_exact(&mut buffer).is_err() {
-                    buffer[0] = 0;
+                let mut input = String::new();
+                if io::stdin().read_line(&mut input).is_ok() {
+                    memory[memory_pointer] = input.bytes().next().unwrap_or(0);
+                } else {
+                    memory[memory_pointer] = 0;
                 }
-                memory[memory_pointer] = buffer[0];
             }
             '[' => {
                 if memory[memory_pointer] == 0 {
-                    let mut depth = 1;
-                    while depth > 0 {
-                        instruction_pointer += 1;
-                        if instruction_pointer >= code.len() {
-                            eprintln!("Error: Unmatched '[' at index {}", instruction_pointer);
-                            return;
-                        }
-                        match code[instruction_pointer] {
-                            '[' => depth += 1,
-                            ']' => depth -= 1,
-                            _ => {}
-                        }
+                    if let Some(&target) = jump_table.get(&instruction_pointer) {
+                        instruction_pointer = target;
                     }
                 }
             }
             ']' => {
                 if memory[memory_pointer] != 0 {
-                    let mut depth = 1;
-                    while depth > 0 {
-                        if instruction_pointer == 0 {
-                            eprintln!("Error: Unmatched ']' at index 0");
-                            return;
-                        }
-                        instruction_pointer -= 1;
-                        match code[instruction_pointer] {
-                            '[' => depth -= 1,
-                            ']' => depth += 1,
-                            _ => {}
-                        }
+                    if let Some(&target) = jump_table.get(&instruction_pointer) {
+                        instruction_pointer = target;
                     }
                 }
             }
@@ -128,8 +130,8 @@ fn main() {
     // Read contents of input file
     let contents = fs::read_to_string(&args.file).expect("Failed to read file");
     
-    // convert to chars
-    let code: Vec<char> = contents.chars().collect();
+    // convert to chars and filter other characters
+    let code: Vec<char> = contents.chars().filter(|&c| "<>+-.,[]".contains(c)).collect();
 
     // Run the program
     run(&code, args.debug, args.step);
