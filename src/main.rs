@@ -9,7 +9,7 @@
 
 // Import dependencies
 use clap::Parser;
-use std::io::{self, Read, Write};
+use std::io::{self, Write};
 use std::collections::HashMap;
 use std::fs;
 
@@ -104,17 +104,17 @@ fn run(code: &[char], debug: bool, step: bool) {
                 }
             }
             '[' => {
-                if memory[memory_pointer] == 0 {
-                    if let Some(&target) = jump_table.get(&instruction_pointer) {
-                        instruction_pointer = target;
-                    }
+                if memory[memory_pointer] == 0
+                    && let Some(&target) = jump_table.get(&instruction_pointer)
+                {
+                    instruction_pointer = target;
                 }
             }
             ']' => {
-                if memory[memory_pointer] != 0 {
-                    if let Some(&target) = jump_table.get(&instruction_pointer) {
-                        instruction_pointer = target;
-                    }
+                if memory[memory_pointer] != 0
+                    && let Some(&target) = jump_table.get(&instruction_pointer)
+                {
+                    instruction_pointer = target;
                 }
             }
             _ => {}
